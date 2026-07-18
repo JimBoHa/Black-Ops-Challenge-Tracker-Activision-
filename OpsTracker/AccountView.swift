@@ -29,6 +29,10 @@ struct AccountView: View {
             }
 
             Section("Data") {
+                if let persistenceError = store.persistenceError {
+                    Label(persistenceError, systemImage: "externaldrive.badge.exclamationmark")
+                        .foregroundStyle(.orange)
+                }
                 Button("Retry sync") { Task { await account.sync() } }
                 Button("Restore sample tracker data") { store.resetSampleData() }
                 Button("Disconnect", role: .destructive) { account.disconnect() }
