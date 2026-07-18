@@ -88,4 +88,24 @@ final class OpsTrackerUITests: XCTestCase {
 
         XCTAssertTrue(app.steppers["Current, 42 / 100"].waitForExistence(timeout: 3))
     }
+
+    func testFilterChipsExposeSelectionAndMinimumHitTargets() {
+        app.tabBars.buttons["Tracker"].tap()
+        let all = app.buttons["All"]
+        let camos = app.buttons["Camos"]
+        XCTAssertTrue(all.waitForExistence(timeout: 3))
+
+        for title in ["All", "Camos", "Calling Cards", "Daily", "Weekly"] {
+            let chip = app.buttons[title]
+            XCTAssertGreaterThanOrEqual(chip.frame.width, 44)
+            XCTAssertGreaterThanOrEqual(chip.frame.height, 44)
+        }
+        XCTAssertTrue(all.isSelected)
+        XCTAssertFalse(camos.isSelected)
+
+        camos.tap()
+
+        XCTAssertFalse(all.isSelected)
+        XCTAssertTrue(camos.isSelected)
+    }
 }
