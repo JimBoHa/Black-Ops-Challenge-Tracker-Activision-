@@ -211,6 +211,19 @@ final class OpsTrackerTests: XCTestCase {
 
         XCTAssertEqual(store.state, .unavailable("Could not read token from Keychain."))
     }
+
+    @MainActor
+    func testInvalidSessionIsRemovedAfterSync() async {
+        let tokenStore = FakeTokenStore(storedToken: "expired-token")
+        let store = AccountStore(keychain: tokenStore, service: InvalidSessionActivisionService())
+
+        await store.sync()
+
+        XCTAssertEqual(store.state, .unavailable("Activision session is invalid or expired."))
+        XCTAssertNil(store.lastSync)
+        XCTAssertNil(tokenStore.storedToken)
+        XCTAssertEqual(tokenStore.deleteCount, 1)
+    }
 }
 
 private final class FakeTokenStore: TokenStoring {
@@ -250,6 +263,12 @@ private struct RejectedSessionError: LocalizedError {
 private actor RejectingActivisionService: ActivisionServicing {
     func verifySession(token: String) async throws -> String {
         throw RejectedSessionError()
+    }
+}
+
+private actor InvalidSessionActivisionService: ActivisionServicing {
+    func verifySession(token: String) async throws -> String {
+        throw ActivisionServiceError.invalidSession
     }
 }
 

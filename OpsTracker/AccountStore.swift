@@ -84,6 +84,15 @@ final class AccountStore {
             activeRequestID = nil
             state = .connected(displayName: identity)
             lastSync = .now
+        } catch ActivisionServiceError.invalidSession {
+            guard activeRequestID == requestID else { return }
+            activeRequestID = nil
+            lastSync = nil
+            if keychain.delete() {
+                state = .unavailable("Activision session is invalid or expired.")
+            } else {
+                state = .unavailable("Activision session expired, but its token could not be removed from Keychain.")
+            }
         } catch {
             guard activeRequestID == requestID else { return }
             activeRequestID = nil
