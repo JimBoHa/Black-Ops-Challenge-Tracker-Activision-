@@ -189,6 +189,7 @@ final class OpsTrackerTests: XCTestCase {
 
     func testKeychainSaveAddsOnlyWhenCredentialIsMissing() {
         var addedValue: String?
+        var accessibility: String?
         let keychain = KeychainStore(
             updateItem: { _, _ in errSecItemNotFound },
             addItem: { item in
@@ -196,12 +197,14 @@ final class OpsTrackerTests: XCTestCase {
                 if let data = dictionary[kSecValueData] as? Data {
                     addedValue = String(decoding: data, as: UTF8.self)
                 }
+                accessibility = dictionary[kSecAttrAccessible] as? String
                 return errSecSuccess
             }
         )
 
         XCTAssertTrue(keychain.save("new-token"))
         XCTAssertEqual(addedValue, "new-token")
+        XCTAssertEqual(accessibility, kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String)
     }
 
     @MainActor
