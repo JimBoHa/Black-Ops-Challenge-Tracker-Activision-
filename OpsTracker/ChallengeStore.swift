@@ -8,14 +8,17 @@ final class ChallengeStore {
     var selectedMode: GameMode?
     var query = ""
     var lastUpdated: Date?
+    private(set) var persistenceError: String?
 
     private let fileURL: URL
 
-    init() {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let folder = base.appending(path: "OpsTracker", directoryHint: .isDirectory)
+    init(fileURL: URL? = nil) {
+        let defaultBase = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let defaultFolder = defaultBase.appending(path: "OpsTracker", directoryHint: .isDirectory)
+        let resolvedURL = fileURL ?? defaultFolder.appending(path: "challenges.json")
+        let folder = resolvedURL.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        fileURL = folder.appending(path: "challenges.json")
+        self.fileURL = resolvedURL
         load()
     }
 
@@ -49,11 +52,28 @@ final class ChallengeStore {
     }
 
     private func load() {
-        guard let data = try? Data(contentsOf: fileURL), let decoded = try? JSONDecoder().decode([Challenge].self, from: data) else {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
             resetSampleData()
             return
         }
-        challenges = decoded
+
+        do {
+            let data = try Data(contentsOf: fileURL)
+            challenges = try JSONDecoder().decode([Challenge].self, from: data)
+        } catch {
+            let backupURL = fileURL
+                .deletingPathExtension()
+                .appendingPathExtension("corrupt-\(UUID().uuidString).json")
+
+            do {
+                try FileManager.default.copyItem(at: fileURL, to: backupURL)
+                persistenceError = "Unreadable tracker data was backed up as \(backupURL.lastPathComponent)."
+            } catch {
+                persistenceError = "Tracker data could not be read or backed up."
+            }
+
+            resetSampleData()
+        }
     }
 
     private func save() {

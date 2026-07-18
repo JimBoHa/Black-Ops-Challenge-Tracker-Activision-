@@ -29,6 +29,27 @@ final class OpsTrackerTests: XCTestCase {
         XCTAssertEqual(Set(ids).count, ids.count)
     }
 
+    func testUnreadableProgressIsBackedUpBeforeSamplesAreRestored() throws {
+        let folder = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        let fileURL = folder.appending(path: "challenges.json")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+
+        let corruptData = Data("not valid challenge json".utf8)
+        try corruptData.write(to: fileURL)
+
+        let store = ChallengeStore(fileURL: fileURL)
+        let backups = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+            .filter { $0.lastPathComponent.hasPrefix("challenges.corrupt-") }
+
+        XCTAssertEqual(store.challenges, SampleCatalog.challenges)
+        XCTAssertEqual(backups.count, 1)
+        XCTAssertEqual(try Data(contentsOf: backups[0]), corruptData)
+        XCTAssertNotNil(store.persistenceError)
+        XCTAssertNoThrow(try JSONDecoder().decode([Challenge].self, from: Data(contentsOf: fileURL)))
+    }
+
     @MainActor
     func testStoredTokenIsNotTreatedAsVerifiedConnection() {
         let tokenStore = FakeTokenStore(storedToken: "unverified-token")
