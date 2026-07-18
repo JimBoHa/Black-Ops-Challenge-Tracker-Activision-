@@ -46,8 +46,8 @@ struct DashboardView: View {
         .navigationTitle("OPS TRACKER")
         .toolbar { ToolbarItem(placement: .primaryAction) { Image(systemName: "shield.lefthalf.filled").foregroundStyle(.orange) } }
         .navigationDestination(for: UUID.self) { id in
-            if let challenge = store.challenge(id: id) {
-                ChallengeDetailView(challenge: challenge)
+            if store.challenge(id: id) != nil {
+                ChallengeDetailView(challengeID: id)
             }
         }
     }

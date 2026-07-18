@@ -66,4 +66,26 @@ final class OpsTrackerUITests: XCTestCase {
         XCTAssertTrue(alert.buttons["Restore data"].exists)
         XCTAssertEqual(alert.buttons.count, 2)
     }
+
+    func testOpenChallengeDetailRefreshesAfterSampleRestore() {
+        app.tabBars.buttons["Account"].tap()
+        app.buttons["Restore sample tracker data"].tap()
+        app.alerts.firstMatch.buttons["Restore data"].tap()
+
+        app.tabBars.buttons["Tracker"].tap()
+        app.staticTexts["Military Camo I"].tap()
+        XCTAssertTrue(app.steppers["Current, 42 / 100"].waitForExistence(timeout: 3))
+
+        let increment = app.buttons["Increment"]
+        XCTAssertTrue(increment.exists)
+        increment.tap()
+        XCTAssertTrue(app.steppers["Current, 43 / 100"].waitForExistence(timeout: 3))
+
+        app.tabBars.buttons["Account"].tap()
+        app.buttons["Restore sample tracker data"].tap()
+        app.alerts.firstMatch.buttons["Restore data"].tap()
+        app.tabBars.buttons["Tracker"].tap()
+
+        XCTAssertTrue(app.steppers["Current, 42 / 100"].waitForExistence(timeout: 3))
+    }
 }
