@@ -16,6 +16,7 @@ final class AccountStore {
     private(set) var lastSync: Date?
     private let keychain: any TokenStoring
     private let service: any ActivisionServicing
+    private var activeRequestID: UUID?
 
     init(
         keychain: any TokenStoring = KeychainStore(),
@@ -29,35 +30,57 @@ final class AccountStore {
     }
 
     func connect(ssoToken: String) async {
+        let requestID = UUID()
+        activeRequestID = requestID
         let token = ssoToken.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !token.isEmpty else { state = .unavailable("Enter an Activision SSO token."); return }
+        guard !token.isEmpty else {
+            activeRequestID = nil
+            state = .unavailable("Enter an Activision SSO token.")
+            return
+        }
         state = .syncing
         do {
             let identity = try await service.verifySession(token: token)
+            guard activeRequestID == requestID else { return }
             guard keychain.save(token) else {
+                activeRequestID = nil
                 state = .unavailable("Could not save token in Keychain.")
                 return
             }
+            activeRequestID = nil
             state = .connected(displayName: identity)
             lastSync = .now
         } catch {
+            guard activeRequestID == requestID else { return }
+            activeRequestID = nil
             state = .unavailable(error.localizedDescription)
         }
     }
 
     func sync() async {
-        guard let token = keychain.read() else { state = .disconnected; return }
+        let requestID = UUID()
+        activeRequestID = requestID
+        guard let token = keychain.read() else {
+            activeRequestID = nil
+            state = .disconnected
+            return
+        }
         state = .syncing
         do {
             let identity = try await service.verifySession(token: token)
+            guard activeRequestID == requestID else { return }
+            activeRequestID = nil
             state = .connected(displayName: identity)
             lastSync = .now
         } catch {
+            guard activeRequestID == requestID else { return }
+            activeRequestID = nil
             state = .unavailable(error.localizedDescription)
         }
     }
 
     func disconnect() {
+        activeRequestID = nil
         keychain.delete()
         state = .disconnected
         lastSync = nil
