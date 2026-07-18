@@ -55,4 +55,15 @@ final class OpsTrackerUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Activision does not expose challenge progress through a supported public API. Manual tracking remains available."].waitForExistence(timeout: 3))
         XCTAssertFalse(app.staticTexts["Activision Account"].exists)
     }
+
+    func testRestoringSampleDataRequiresConfirmation() {
+        app.tabBars.buttons["Account"].tap()
+
+        app.buttons["Restore sample tracker data"].tap()
+
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 3))
+        XCTAssertTrue(alert.buttons["Restore data"].exists)
+        XCTAssertEqual(alert.buttons.count, 2)
+    }
 }
