@@ -124,4 +124,10 @@ final class OpsTrackerUITests: XCTestCase {
         XCTAssertLessThanOrEqual(count.frame.maxX, app.windows.firstMatch.frame.maxX)
         XCTAssertTrue(app.navigationBars["OPS TRACKER"].exists)
     }
+
+    func testDashboardDoesNotExposeDecorativeShield() {
+        XCTAssertTrue(app.navigationBars["OPS TRACKER"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.images["shield.lefthalf.filled"].exists)
+        XCTAssertFalse(app.buttons["shield.lefthalf.filled"].exists)
+    }
 }
