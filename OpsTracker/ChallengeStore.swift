@@ -9,34 +9,47 @@ final class ChallengeStore {
     var query = ""
     var lastUpdated: Date?
     private(set) var persistenceError: String?
+    private(set) var currentDate: Date
 
     private let fileURL: URL
+    private let now: () -> Date
 
-    init(fileURL: URL? = nil) {
+    init(fileURL: URL? = nil, now: @escaping () -> Date = Date.init) {
         let defaultBase = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let defaultFolder = defaultBase.appending(path: "OpsTracker", directoryHint: .isDirectory)
         let resolvedURL = fileURL ?? defaultFolder.appending(path: "challenges.json")
         let folder = resolvedURL.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         self.fileURL = resolvedURL
+        self.now = now
+        self.currentDate = now()
         load()
     }
 
+    var active: [Challenge] {
+        return challenges.filter { !$0.isExpired(at: currentDate) }
+    }
+
     var filtered: [Challenge] {
-        challenges.filter { item in
+        active.filter { item in
             (selectedKind == nil || item.kind == selectedKind) &&
             (selectedMode == nil || item.mode == selectedMode) &&
             (query.isEmpty || item.title.localizedCaseInsensitiveContains(query) || item.detail.localizedCaseInsensitiveContains(query) || item.group.localizedCaseInsensitiveContains(query))
         }
     }
 
-    var tracked: [Challenge] { challenges.filter(\.tracked).sorted { $0.progress > $1.progress } }
+    var tracked: [Challenge] { active.filter(\.tracked).sorted { $0.progress > $1.progress } }
     var completion: Double {
-        guard !challenges.isEmpty else { return 0 }
-        return Double(challenges.filter(\.isComplete).count) / Double(challenges.count)
+        let activeChallenges = active
+        guard !activeChallenges.isEmpty else { return 0 }
+        return Double(activeChallenges.filter(\.isComplete).count) / Double(activeChallenges.count)
     }
 
     func challenge(id: UUID) -> Challenge? { challenges.first { $0.id == id } }
+
+    func refreshExpirations() {
+        currentDate = now()
+    }
 
     func update(_ challenge: Challenge) {
         guard let index = challenges.firstIndex(where: { $0.id == challenge.id }) else { return }

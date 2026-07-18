@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct RootView: View {
+    @Environment(ChallengeStore.self) private var store
+
     var body: some View {
         TabView {
             NavigationStack { DashboardView() }
@@ -11,6 +13,16 @@ struct RootView: View {
                 .tabItem { Label("Account", systemImage: "person.crop.circle") }
         }
         .tint(.orange)
+        .task {
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: .seconds(60))
+                } catch {
+                    return
+                }
+                store.refreshExpirations()
+            }
+        }
     }
 }
 
@@ -46,7 +58,7 @@ struct DashboardView: View {
             HStack(alignment: .lastTextBaseline) {
                 Text(store.completion, format: .percent.precision(.fractionLength(0))).font(.system(size: 48, weight: .black, design: .rounded))
                 Spacer()
-                Text("\(store.challenges.filter(\.isComplete).count) / \(store.challenges.count) COMPLETE").font(.caption.bold()).foregroundStyle(.secondary)
+                Text("\(store.active.filter(\.isComplete).count) / \(store.active.count) COMPLETE").font(.caption.bold()).foregroundStyle(.secondary)
             }
             ProgressView(value: store.completion).tint(.orange).scaleEffect(y: 2)
         }
