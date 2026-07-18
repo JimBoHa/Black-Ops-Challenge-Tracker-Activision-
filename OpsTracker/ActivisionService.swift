@@ -11,7 +11,11 @@ enum ActivisionServiceError: LocalizedError {
     }
 }
 
-actor ActivisionService {
+protocol ActivisionServicing: Sendable {
+    func verifySession(token: String) async throws -> String
+}
+
+actor ActivisionService: ActivisionServicing {
     private let session: URLSession
 
     init(session: URLSession = .shared) { self.session = session }
