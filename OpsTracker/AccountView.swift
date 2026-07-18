@@ -25,7 +25,12 @@ struct AccountView: View {
             Section("Secure session") {
                 tokenField
                 Toggle("Show token", isOn: $showingToken)
-                Button("Save and connect") { Task { await account.connect(ssoToken: token); token = "" } }.disabled(token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Button("Save and connect") {
+                    let submittedToken = token
+                    token = ""
+                    Task { await account.connect(ssoToken: submittedToken) }
+                }
+                .disabled(token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 Text("Never enter your Activision password. Session token stays in this device's Keychain and is never committed or logged.").font(.caption).foregroundStyle(.secondary)
             }
 
