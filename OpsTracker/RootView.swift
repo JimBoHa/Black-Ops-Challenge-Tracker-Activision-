@@ -46,7 +46,6 @@ struct DashboardView: View {
         .background(Color.black)
         .navigationTitle("OPS TRACKER")
         .navigationBarTitleDisplayMode(dynamicTypeSize.isAccessibilitySize ? .inline : .automatic)
-        .toolbar { ToolbarItem(placement: .primaryAction) { Image(systemName: "shield.lefthalf.filled").foregroundStyle(.orange) } }
         .navigationDestination(for: UUID.self) { id in
             if store.challenge(id: id) != nil {
                 ChallengeDetailView(challengeID: id)
