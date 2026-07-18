@@ -33,6 +33,11 @@ struct DashboardView: View {
         .background(Color.black)
         .navigationTitle("OPS TRACKER")
         .toolbar { ToolbarItem(placement: .primaryAction) { Image(systemName: "shield.lefthalf.filled").foregroundStyle(.orange) } }
+        .navigationDestination(for: UUID.self) { id in
+            if let challenge = store.challenge(id: id) {
+                ChallengeDetailView(challenge: challenge)
+            }
+        }
     }
 
     private var hero: some View {
