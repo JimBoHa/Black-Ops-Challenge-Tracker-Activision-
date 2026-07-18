@@ -153,13 +153,30 @@ final class OpsTrackerTests: XCTestCase {
         XCTAssertEqual(tokenStore.storedToken, "newer-token")
         XCTAssertEqual(tokenStore.saveCount, 1)
     }
+
+    @MainActor
+    func testFailedKeychainDeletionDoesNotReportDisconnected() {
+        let tokenStore = FakeTokenStore(storedToken: "retained-token", deleteSucceeds: false)
+        let store = AccountStore(keychain: tokenStore, service: RejectingActivisionService())
+
+        store.disconnect()
+
+        XCTAssertEqual(store.state, .unavailable("Could not remove token from Keychain."))
+        XCTAssertEqual(tokenStore.storedToken, "retained-token")
+        XCTAssertEqual(tokenStore.deleteCount, 1)
+    }
 }
 
 private final class FakeTokenStore: TokenStoring {
     var storedToken: String?
     var saveCount = 0
+    var deleteCount = 0
+    private let deleteSucceeds: Bool
 
-    init(storedToken: String? = nil) { self.storedToken = storedToken }
+    init(storedToken: String? = nil, deleteSucceeds: Bool = true) {
+        self.storedToken = storedToken
+        self.deleteSucceeds = deleteSucceeds
+    }
 
     func save(_ value: String) -> Bool {
         saveCount += 1
@@ -168,7 +185,11 @@ private final class FakeTokenStore: TokenStoring {
     }
 
     func read() -> String? { storedToken }
-    func delete() { storedToken = nil }
+    func delete() -> Bool {
+        deleteCount += 1
+        if deleteSucceeds { storedToken = nil }
+        return deleteSucceeds
+    }
 }
 
 private struct RejectedSessionError: LocalizedError {

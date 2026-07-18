@@ -81,16 +81,19 @@ final class AccountStore {
 
     func disconnect() {
         activeRequestID = nil
-        keychain.delete()
-        state = .disconnected
-        lastSync = nil
+        if keychain.delete() {
+            state = .disconnected
+            lastSync = nil
+        } else {
+            state = .unavailable("Could not remove token from Keychain.")
+        }
     }
 }
 
 protocol TokenStoring {
     func save(_ value: String) -> Bool
     func read() -> String?
-    func delete()
+    func delete() -> Bool
 }
 
 struct KeychainStore: TokenStoring {
@@ -98,7 +101,7 @@ struct KeychainStore: TokenStoring {
     let account = "activision-sso"
 
     func save(_ value: String) -> Bool {
-        delete()
+        guard delete() else { return false }
         let data = Data(value.utf8)
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account, kSecValueData as String: data, kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
         return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
@@ -111,8 +114,9 @@ struct KeychainStore: TokenStoring {
         return String(data: data, encoding: .utf8)
     }
 
-    func delete() {
+    func delete() -> Bool {
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account]
-        SecItemDelete(query as CFDictionary)
+        let status = SecItemDelete(query as CFDictionary)
+        return status == errSecSuccess || status == errSecItemNotFound
     }
 }
