@@ -6,6 +6,9 @@ final class OpsTrackerUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
+        if name.contains("DashboardAtAccessibilityTextSize") {
+            app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        }
         app.launch()
     }
 
@@ -107,5 +110,18 @@ final class OpsTrackerUITests: XCTestCase {
 
         XCTAssertFalse(all.isSelected)
         XCTAssertTrue(camos.isSelected)
+    }
+
+    func testDashboardAtAccessibilityTextSizeDoesNotOverlap() {
+        let percentage = app.staticTexts["completionPercentage"]
+        let count = app.staticTexts["completionCount"]
+        XCTAssertTrue(percentage.waitForExistence(timeout: 3))
+        XCTAssertTrue(count.exists)
+
+        XCTAssertGreaterThan(percentage.frame.height, 60)
+        XCTAssertTrue(percentage.frame.intersection(count.frame).isNull)
+        XCTAssertLessThanOrEqual(percentage.frame.maxX, app.windows.firstMatch.frame.maxX)
+        XCTAssertLessThanOrEqual(count.frame.maxX, app.windows.firstMatch.frame.maxX)
+        XCTAssertTrue(app.navigationBars["OPS TRACKER"].exists)
     }
 }
