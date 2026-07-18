@@ -97,14 +97,41 @@ protocol TokenStoring {
 }
 
 struct KeychainStore: TokenStoring {
-    let service = "com.jimboha.OpsTracker"
-    let account = "activision-sso"
+    let service: String
+    let account: String
+    private let updateItem: (CFDictionary, CFDictionary) -> OSStatus
+    private let addItem: (CFDictionary) -> OSStatus
+
+    init(
+        service: String = "com.jimboha.OpsTracker",
+        account: String = "activision-sso",
+        updateItem: @escaping (CFDictionary, CFDictionary) -> OSStatus = { SecItemUpdate($0, $1) },
+        addItem: @escaping (CFDictionary) -> OSStatus = { SecItemAdd($0, nil) }
+    ) {
+        self.service = service
+        self.account = account
+        self.updateItem = updateItem
+        self.addItem = addItem
+    }
 
     func save(_ value: String) -> Bool {
-        guard delete() else { return false }
         let data = Data(value.utf8)
-        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account, kSecValueData as String: data, kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
-        return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
+        let identity: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+        let attributes: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
+
+        let updateStatus = updateItem(identity as CFDictionary, attributes as CFDictionary)
+        if updateStatus == errSecSuccess { return true }
+        guard updateStatus == errSecItemNotFound else { return false }
+
+        let newItem = identity.merging(attributes) { _, newValue in newValue }
+        return addItem(newItem as CFDictionary) == errSecSuccess
     }
 
     func read() -> String? {

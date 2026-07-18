@@ -1,4 +1,5 @@
 import XCTest
+import Security
 @testable import OpsTracker
 
 final class OpsTrackerTests: XCTestCase {
@@ -164,6 +165,43 @@ final class OpsTrackerTests: XCTestCase {
         XCTAssertEqual(store.state, .unavailable("Could not remove token from Keychain."))
         XCTAssertEqual(tokenStore.storedToken, "retained-token")
         XCTAssertEqual(tokenStore.deleteCount, 1)
+    }
+
+    func testKeychainReplacementFailurePreservesExistingCredential() {
+        var storedValue = "existing-token"
+        var addCount = 0
+        let keychain = KeychainStore(
+            updateItem: { _, _ in errSecAuthFailed },
+            addItem: { item in
+                addCount += 1
+                let dictionary = item as NSDictionary
+                if let data = dictionary[kSecValueData] as? Data {
+                    storedValue = String(decoding: data, as: UTF8.self)
+                }
+                return errSecSuccess
+            }
+        )
+
+        XCTAssertFalse(keychain.save("replacement-token"))
+        XCTAssertEqual(storedValue, "existing-token")
+        XCTAssertEqual(addCount, 0)
+    }
+
+    func testKeychainSaveAddsOnlyWhenCredentialIsMissing() {
+        var addedValue: String?
+        let keychain = KeychainStore(
+            updateItem: { _, _ in errSecItemNotFound },
+            addItem: { item in
+                let dictionary = item as NSDictionary
+                if let data = dictionary[kSecValueData] as? Data {
+                    addedValue = String(decoding: data, as: UTF8.self)
+                }
+                return errSecSuccess
+            }
+        )
+
+        XCTAssertTrue(keychain.save("new-token"))
+        XCTAssertEqual(addedValue, "new-token")
     }
 }
 
