@@ -44,13 +44,17 @@ struct Challenge: Identifiable, Codable, Hashable {
 }
 
 enum SampleCatalog {
-    static let challenges: [Challenge] = [
+    static var challenges: [Challenge] { makeChallenges(at: .now) }
+
+    static func makeChallenges(at referenceDate: Date) -> [Challenge] {
+        [
         Challenge(id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!, title: "Military Camo I", detail: "Get 100 eliminations with this weapon.", kind: .camo, mode: .multiplayer, group: "Assault Rifles", current: 42, target: 100, reward: "Granite", expiresAt: nil, tracked: true),
         Challenge(id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!, title: "Special Camo", detail: "Get 30 eliminations shortly after sprinting.", kind: .camo, mode: .multiplayer, group: "Assault Rifles", current: 8, target: 30, reward: "Special Camo", expiresAt: nil, tracked: false),
         Challenge(id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!, title: "Undead Hunter", detail: "Eliminate 1,000 zombies with critical hits.", kind: .callingCard, mode: .zombies, group: "Career", current: 680, target: 1000, reward: "Undead Hunter Calling Card", expiresAt: nil, tracked: true),
-        Challenge(id: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!, title: "Win Matches", detail: "Win 2 Multiplayer matches.", kind: .daily, mode: .multiplayer, group: "Today", current: 1, target: 2, reward: "2,500 XP", expiresAt: Calendar.current.date(byAdding: .day, value: 1, to: .now), tracked: true),
-        Challenge(id: UUID(uuidString: "55555555-5555-5555-5555-555555555555")!, title: "Team Player", detail: "Earn 25 objective medals.", kind: .daily, mode: .multiplayer, group: "Today", current: 17, target: 25, reward: "2,500 XP", expiresAt: Calendar.current.date(byAdding: .day, value: 1, to: .now), tracked: false),
-        Challenge(id: UUID(uuidString: "66666666-6666-6666-6666-666666666666")!, title: "Weekly Operator", detail: "Complete any 6 challenges this week.", kind: .weekly, mode: .multiplayer, group: "Season 5 · Week 1", current: 3, target: 6, reward: "Grid-Breaker Kit", expiresAt: Calendar.current.date(byAdding: .day, value: 7, to: .now), tracked: true),
-        Challenge(id: UUID(uuidString: "77777777-7777-7777-7777-777777777777")!, title: "Critical Cleanup", detail: "Get 500 critical eliminations in Zombies.", kind: .weekly, mode: .zombies, group: "Season 5 · Week 1", current: 221, target: 500, reward: "5,000 XP", expiresAt: Calendar.current.date(byAdding: .day, value: 7, to: .now), tracked: false)
-    ]
+        Challenge(id: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!, title: "Win Matches", detail: "Win 2 Multiplayer matches.", kind: .daily, mode: .multiplayer, group: "Today", current: 1, target: 2, reward: "2,500 XP", expiresAt: Calendar.current.date(byAdding: .day, value: 1, to: referenceDate), tracked: true),
+        Challenge(id: UUID(uuidString: "55555555-5555-5555-5555-555555555555")!, title: "Team Player", detail: "Earn 25 objective medals.", kind: .daily, mode: .multiplayer, group: "Today", current: 17, target: 25, reward: "2,500 XP", expiresAt: Calendar.current.date(byAdding: .day, value: 1, to: referenceDate), tracked: false),
+        Challenge(id: UUID(uuidString: "66666666-6666-6666-6666-666666666666")!, title: "Weekly Operator", detail: "Complete any 6 challenges this week.", kind: .weekly, mode: .multiplayer, group: "Season 5 · Week 1", current: 3, target: 6, reward: "Grid-Breaker Kit", expiresAt: Calendar.current.date(byAdding: .day, value: 7, to: referenceDate), tracked: true),
+        Challenge(id: UUID(uuidString: "77777777-7777-7777-7777-777777777777")!, title: "Critical Cleanup", detail: "Get 500 critical eliminations in Zombies.", kind: .weekly, mode: .zombies, group: "Season 5 · Week 1", current: 221, target: 500, reward: "5,000 XP", expiresAt: Calendar.current.date(byAdding: .day, value: 7, to: referenceDate), tracked: false)
+        ]
+    }
 }
