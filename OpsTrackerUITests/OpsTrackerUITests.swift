@@ -1,0 +1,45 @@
+import XCTest
+
+final class OpsTrackerUITests: XCTestCase {
+    private var app: XCUIApplication!
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        app = XCUIApplication()
+        app.launch()
+    }
+
+    func testMainTabsAndDashboardRender() {
+        XCTAssertTrue(app.navigationBars["OPS TRACKER"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.tabBars.buttons["Overview"].exists)
+        XCTAssertTrue(app.tabBars.buttons["Tracker"].exists)
+        XCTAssertTrue(app.tabBars.buttons["Account"].exists)
+        XCTAssertTrue(app.staticTexts["MISSION READINESS"].exists)
+    }
+
+    func testTrackerChallengeOpensDetails() {
+        app.tabBars.buttons["Tracker"].tap()
+        XCTAssertTrue(app.navigationBars["CHALLENGES"].waitForExistence(timeout: 3))
+        let challenge = app.staticTexts["Military Camo I"]
+        XCTAssertTrue(challenge.waitForExistence(timeout: 3))
+        challenge.tap()
+        XCTAssertTrue(app.navigationBars["Military Camo I"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Objective"].exists)
+        XCTAssertTrue(app.staticTexts["Progress"].exists)
+    }
+
+    func testDashboardTrackedChallengeOpensDetails() {
+        let challenge = app.staticTexts["Military Camo I"]
+        XCTAssertTrue(challenge.waitForExistence(timeout: 3))
+        challenge.tap()
+        XCTAssertTrue(app.navigationBars["Military Camo I"].waitForExistence(timeout: 3))
+    }
+
+    func testAccountScreenShowsSecureSessionControls() {
+        app.tabBars.buttons["Account"].tap()
+        XCTAssertTrue(app.navigationBars["ACCOUNT"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.secureTextFields["SSO token"].exists)
+        XCTAssertTrue(app.buttons["Save and connect"].exists)
+        XCTAssertFalse(app.buttons["Save and connect"].isEnabled)
+    }
+}
