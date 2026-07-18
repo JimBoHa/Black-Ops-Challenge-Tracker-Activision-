@@ -33,7 +33,7 @@ struct TrackerView: View {
         .navigationTitle("CHALLENGES")
         .searchable(text: $store.query, prompt: "Search challenges")
         .navigationDestination(for: UUID.self) { id in
-            if let challenge = store.challenge(id: id) { ChallengeDetailView(challenge: challenge) }
+            if store.challenge(id: id) != nil { ChallengeDetailView(challengeID: id) }
         }
     }
 }
@@ -53,22 +53,47 @@ struct FilterChip: View {
 
 struct ChallengeDetailView: View {
     @Environment(ChallengeStore.self) private var store
-    @State var challenge: Challenge
+    let challengeID: UUID
 
     var body: some View {
-        Form {
-            Section("Objective") { Text(challenge.detail); LabeledContent("Reward", value: challenge.reward); LabeledContent("Mode", value: challenge.mode.rawValue) }
-            Section("Progress") {
-                ProgressView(value: challenge.progress).tint(.orange)
-                Stepper(value: $challenge.current, in: 0...challenge.target) { LabeledContent("Current", value: "\(challenge.current) / \(challenge.target)") }
-                Toggle("Track on dashboard", isOn: $challenge.tracked).tint(.orange)
-                if let persistenceError = store.persistenceError {
-                    Label(persistenceError, systemImage: "externaldrive.badge.exclamationmark")
-                        .foregroundStyle(.orange)
+        Group {
+            if let challenge = store.challenge(id: challengeID) {
+                Form {
+                    Section("Objective") { Text(challenge.detail); LabeledContent("Reward", value: challenge.reward); LabeledContent("Mode", value: challenge.mode.rawValue) }
+                    Section("Progress") {
+                        ProgressView(value: challenge.progress).tint(.orange)
+                        Stepper(value: current, in: 0...challenge.target) { LabeledContent("Current", value: "\(challenge.current) / \(challenge.target)") }
+                        Toggle("Track on dashboard", isOn: tracked).tint(.orange)
+                        if let persistenceError = store.persistenceError {
+                            Label(persistenceError, systemImage: "externaldrive.badge.exclamationmark")
+                                .foregroundStyle(.orange)
+                        }
+                    }
                 }
+            } else {
+                ContentUnavailableView("Challenge unavailable", systemImage: "exclamationmark.triangle")
             }
         }
-        .navigationTitle(challenge.title)
-        .onChange(of: challenge) { _, value in store.update(value) }
+        .navigationTitle(store.challenge(id: challengeID)?.title ?? "CHALLENGE")
+    }
+
+    private var current: Binding<Int> {
+        Binding(
+            get: { store.challenge(id: challengeID)?.current ?? 0 },
+            set: { newValue in update(\.current, to: newValue) }
+        )
+    }
+
+    private var tracked: Binding<Bool> {
+        Binding(
+            get: { store.challenge(id: challengeID)?.tracked ?? false },
+            set: { newValue in update(\.tracked, to: newValue) }
+        )
+    }
+
+    private func update<Value>(_ keyPath: WritableKeyPath<Challenge, Value>, to value: Value) {
+        guard var challenge = store.challenge(id: challengeID) else { return }
+        challenge[keyPath: keyPath] = value
+        store.update(challenge)
     }
 }
