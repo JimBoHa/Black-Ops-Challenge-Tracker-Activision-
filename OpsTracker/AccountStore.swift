@@ -10,6 +10,7 @@ enum SyncState: Equatable {
 }
 
 @Observable
+@MainActor
 final class AccountStore {
     private(set) var state: SyncState = .disconnected
     private(set) var lastSync: Date?
