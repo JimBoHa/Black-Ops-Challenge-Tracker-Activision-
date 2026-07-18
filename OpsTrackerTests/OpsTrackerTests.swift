@@ -62,6 +62,39 @@ final class OpsTrackerTests: XCTestCase {
         XCTAssertNil(store.lastUpdated)
     }
 
+    func testExpiredChallengesAreExcludedFromListsAndCompletion() throws {
+        let now = Date(timeIntervalSince1970: 10_000)
+        var clock = now
+        let folder = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        let fileURL = folder.appending(path: "challenges.json")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+
+        let expired = Challenge(
+            id: UUID(), title: "Expired daily", detail: "Expired", kind: .daily,
+            mode: .multiplayer, group: "Yesterday", current: 1, target: 1,
+            reward: "XP", expiresAt: now, tracked: true
+        )
+        let active = Challenge(
+            id: UUID(), title: "Active weekly", detail: "Active", kind: .weekly,
+            mode: .zombies, group: "This week", current: 0, target: 1,
+            reward: "XP", expiresAt: now.addingTimeInterval(1), tracked: true
+        )
+        try JSONEncoder().encode([expired, active]).write(to: fileURL)
+
+        let store = ChallengeStore(fileURL: fileURL, now: { clock })
+
+        XCTAssertEqual(store.active.map(\.id), [active.id])
+        XCTAssertEqual(store.filtered.map(\.id), [active.id])
+        XCTAssertEqual(store.tracked.map(\.id), [active.id])
+        XCTAssertEqual(store.completion, 0)
+
+        clock = now.addingTimeInterval(2)
+        store.refreshExpirations()
+        XCTAssertTrue(store.active.isEmpty)
+    }
+
     @MainActor
     func testStoredTokenIsNotTreatedAsVerifiedConnection() {
         let tokenStore = FakeTokenStore(storedToken: "unverified-token")

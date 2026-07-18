@@ -39,6 +39,7 @@ struct Challenge: Identifiable, Codable, Hashable {
     var tracked: Bool
 
     var isComplete: Bool { current >= target }
+    func isExpired(at date: Date) -> Bool { expiresAt.map { $0 <= date } ?? false }
     var progress: Double { target > 0 ? min(Double(current) / Double(target), 1) : 0 }
 }
 
