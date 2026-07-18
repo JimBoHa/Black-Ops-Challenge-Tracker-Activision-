@@ -14,19 +14,35 @@ enum SyncState: Equatable {
 final class AccountStore {
     private(set) var state: SyncState = .disconnected
     private(set) var lastSync: Date?
-    private let keychain = KeychainStore()
-    private let service = ActivisionService()
+    private let keychain: any TokenStoring
+    private let service: any ActivisionServicing
 
-    init() {
-        if keychain.read() != nil { state = .connected(displayName: "Activision Account") }
+    init(
+        keychain: any TokenStoring = KeychainStore(),
+        service: any ActivisionServicing = ActivisionService()
+    ) {
+        self.keychain = keychain
+        self.service = service
+        if keychain.read() != nil {
+            state = .unavailable("Stored Activision session requires verification.")
+        }
     }
 
     func connect(ssoToken: String) async {
         let token = ssoToken.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !token.isEmpty else { state = .unavailable("Enter an Activision SSO token."); return }
-        guard keychain.save(token) else { state = .unavailable("Could not save token in Keychain."); return }
-        state = .connected(displayName: "Activision Account")
-        await sync()
+        state = .syncing
+        do {
+            let identity = try await service.verifySession(token: token)
+            guard keychain.save(token) else {
+                state = .unavailable("Could not save token in Keychain.")
+                return
+            }
+            state = .connected(displayName: identity)
+            lastSync = .now
+        } catch {
+            state = .unavailable(error.localizedDescription)
+        }
     }
 
     func sync() async {
@@ -48,7 +64,13 @@ final class AccountStore {
     }
 }
 
-private struct KeychainStore {
+protocol TokenStoring {
+    func save(_ value: String) -> Bool
+    func read() -> String?
+    func delete()
+}
+
+struct KeychainStore: TokenStoring {
     let service = "com.jimboha.OpsTracker"
     let account = "activision-sso"
 

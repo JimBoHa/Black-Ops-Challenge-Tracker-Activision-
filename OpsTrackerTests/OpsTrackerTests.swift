@@ -28,4 +28,50 @@ final class OpsTrackerTests: XCTestCase {
         let ids = SampleCatalog.challenges.map(\.id)
         XCTAssertEqual(Set(ids).count, ids.count)
     }
+
+    @MainActor
+    func testStoredTokenIsNotTreatedAsVerifiedConnection() {
+        let tokenStore = FakeTokenStore(storedToken: "unverified-token")
+        let store = AccountStore(keychain: tokenStore, service: RejectingActivisionService())
+
+        XCTAssertEqual(store.state, .unavailable("Stored Activision session requires verification."))
+    }
+
+    @MainActor
+    func testRejectedTokenIsNotPersisted() async {
+        let tokenStore = FakeTokenStore()
+        let store = AccountStore(keychain: tokenStore, service: RejectingActivisionService())
+
+        await store.connect(ssoToken: "invalid-token")
+
+        XCTAssertNil(tokenStore.storedToken)
+        XCTAssertEqual(tokenStore.saveCount, 0)
+        XCTAssertEqual(store.state, .unavailable("Rejected test session."))
+    }
+}
+
+private final class FakeTokenStore: TokenStoring {
+    var storedToken: String?
+    var saveCount = 0
+
+    init(storedToken: String? = nil) { self.storedToken = storedToken }
+
+    func save(_ value: String) -> Bool {
+        saveCount += 1
+        storedToken = value
+        return true
+    }
+
+    func read() -> String? { storedToken }
+    func delete() { storedToken = nil }
+}
+
+private struct RejectedSessionError: LocalizedError {
+    var errorDescription: String? { "Rejected test session." }
+}
+
+private actor RejectingActivisionService: ActivisionServicing {
+    func verifySession(token: String) async throws -> String {
+        throw RejectedSessionError()
+    }
 }

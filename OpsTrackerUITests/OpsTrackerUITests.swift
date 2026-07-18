@@ -42,4 +42,17 @@ final class OpsTrackerUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Save and connect"].exists)
         XCTAssertFalse(app.buttons["Save and connect"].isEnabled)
     }
+
+    func testRejectedTokenDoesNotShowConnectedState() {
+        app.tabBars.buttons["Account"].tap()
+        app.buttons["Disconnect"].tap()
+
+        let tokenField = app.secureTextFields["SSO token"]
+        tokenField.tap()
+        tokenField.typeText("invalid-test-token")
+        app.buttons["Save and connect"].tap()
+
+        XCTAssertTrue(app.staticTexts["Activision does not expose challenge progress through a supported public API. Manual tracking remains available."].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.staticTexts["Activision Account"].exists)
+    }
 }
