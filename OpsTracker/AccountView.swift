@@ -5,6 +5,7 @@ struct AccountView: View {
     @Environment(ChallengeStore.self) private var store
     @State private var token = ""
     @State private var showingToken = false
+    @State private var showingResetConfirmation = false
 
     var body: some View {
         Form {
@@ -34,7 +35,9 @@ struct AccountView: View {
                         .foregroundStyle(.orange)
                 }
                 Button("Retry sync") { Task { await account.sync() } }
-                Button("Restore sample tracker data") { store.resetSampleData() }
+                Button("Restore sample tracker data", role: .destructive) {
+                    showingResetConfirmation = true
+                }
                 Button("Disconnect", role: .destructive) { account.disconnect() }
             }
 
@@ -44,6 +47,12 @@ struct AccountView: View {
             }
         }
         .navigationTitle("ACCOUNT")
+        .alert("Replace tracker data?", isPresented: $showingResetConfirmation) {
+            Button("Restore data", role: .destructive) { store.resetSampleData() }
+            Button("Keep current data", role: .cancel) {}
+        } message: {
+            Text("This replaces all manual progress and tracked choices with sample data.")
+        }
     }
 
     @ViewBuilder
