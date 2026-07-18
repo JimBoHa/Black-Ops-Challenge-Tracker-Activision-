@@ -62,6 +62,10 @@ struct ChallengeDetailView: View {
                 ProgressView(value: challenge.progress).tint(.orange)
                 Stepper(value: $challenge.current, in: 0...challenge.target) { LabeledContent("Current", value: "\(challenge.current) / \(challenge.target)") }
                 Toggle("Track on dashboard", isOn: $challenge.tracked).tint(.orange)
+                if let persistenceError = store.persistenceError {
+                    Label(persistenceError, systemImage: "externaldrive.badge.exclamationmark")
+                        .foregroundStyle(.orange)
+                }
             }
         }
         .navigationTitle(challenge.title)

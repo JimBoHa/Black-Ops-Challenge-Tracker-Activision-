@@ -50,6 +50,18 @@ final class OpsTrackerTests: XCTestCase {
         XCTAssertNoThrow(try JSONDecoder().decode([Challenge].self, from: Data(contentsOf: fileURL)))
     }
 
+    func testSaveFailureIsReportedAndDoesNotClaimSuccessfulUpdate() {
+        let invalidURL = URL(fileURLWithPath: "/dev/null/challenges.json")
+        let store = ChallengeStore(fileURL: invalidURL)
+        var challenge = store.challenges[0]
+        challenge.current += 1
+
+        store.update(challenge)
+
+        XCTAssertEqual(store.persistenceError, "Changes could not be saved. Check available device storage.")
+        XCTAssertNil(store.lastUpdated)
+    }
+
     @MainActor
     func testStoredTokenIsNotTreatedAsVerifiedConnection() {
         let tokenStore = FakeTokenStore(storedToken: "unverified-token")

@@ -41,14 +41,15 @@ final class ChallengeStore {
     func update(_ challenge: Challenge) {
         guard let index = challenges.firstIndex(where: { $0.id == challenge.id }) else { return }
         challenges[index] = challenge
-        lastUpdated = .now
-        save()
+        if save() { lastUpdated = .now }
     }
 
-    func resetSampleData() {
+    @discardableResult
+    func resetSampleData() -> Bool {
         challenges = SampleCatalog.challenges
-        lastUpdated = .now
-        save()
+        let saved = save()
+        if saved { lastUpdated = .now }
+        return saved
     }
 
     private func load() {
@@ -65,19 +66,30 @@ final class ChallengeStore {
                 .deletingPathExtension()
                 .appendingPathExtension("corrupt-\(UUID().uuidString).json")
 
+            let recoveryMessage: String
             do {
                 try FileManager.default.copyItem(at: fileURL, to: backupURL)
-                persistenceError = "Unreadable tracker data was backed up as \(backupURL.lastPathComponent)."
+                recoveryMessage = "Unreadable tracker data was backed up as \(backupURL.lastPathComponent)."
             } catch {
-                persistenceError = "Tracker data could not be read or backed up."
+                recoveryMessage = "Tracker data could not be read or backed up."
             }
 
-            resetSampleData()
+            if resetSampleData() {
+                persistenceError = recoveryMessage
+            }
         }
     }
 
-    private func save() {
-        guard let data = try? JSONEncoder().encode(challenges) else { return }
-        try? data.write(to: fileURL, options: .atomic)
+    @discardableResult
+    private func save() -> Bool {
+        do {
+            let data = try JSONEncoder().encode(challenges)
+            try data.write(to: fileURL, options: .atomic)
+            persistenceError = nil
+            return true
+        } catch {
+            persistenceError = "Changes could not be saved. Check available device storage."
+            return false
+        }
     }
 }
