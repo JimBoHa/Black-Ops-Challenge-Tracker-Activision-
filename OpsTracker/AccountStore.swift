@@ -149,7 +149,7 @@ struct KeychainStore: TokenStoring {
         ]
         let attributes: [String: Any] = [
             kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         ]
 
         let updateStatus = updateItem(identity as CFDictionary, attributes as CFDictionary)
