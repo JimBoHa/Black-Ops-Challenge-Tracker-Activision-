@@ -59,7 +59,9 @@ final class ChallengeStore {
 
     @discardableResult
     func resetSampleData() -> Bool {
-        challenges = SampleCatalog.challenges
+        let resetDate = now()
+        currentDate = resetDate
+        challenges = SampleCatalog.makeChallenges(at: resetDate)
         let saved = save()
         if saved { lastUpdated = .now }
         return saved

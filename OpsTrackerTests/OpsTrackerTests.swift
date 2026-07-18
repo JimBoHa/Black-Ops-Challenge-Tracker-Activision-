@@ -44,7 +44,7 @@ final class OpsTrackerTests: XCTestCase {
         let backups = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
             .filter { $0.lastPathComponent.hasPrefix("challenges.corrupt-") }
 
-        XCTAssertEqual(store.challenges, SampleCatalog.challenges)
+        XCTAssertEqual(store.challenges, SampleCatalog.makeChallenges(at: store.currentDate))
         XCTAssertEqual(backups.count, 1)
         XCTAssertEqual(try Data(contentsOf: backups[0]), corruptData)
         XCTAssertNotNil(store.persistenceError)
@@ -94,6 +94,24 @@ final class OpsTrackerTests: XCTestCase {
         clock = now.addingTimeInterval(2)
         store.refreshExpirations()
         XCTAssertTrue(store.active.isEmpty)
+    }
+
+    func testRestoredSamplesReceiveFreshExpirationDates() throws {
+        var clock = Date(timeIntervalSince1970: 10_000)
+        let folder = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        let fileURL = folder.appending(path: "challenges.json")
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let store = ChallengeStore(fileURL: fileURL, now: { clock })
+        let originalDailyExpiration = store.challenges.first { $0.kind == .daily }?.expiresAt
+
+        clock = clock.addingTimeInterval(10 * 24 * 60 * 60)
+        XCTAssertTrue(store.resetSampleData())
+
+        let timedChallenges = store.challenges.filter { $0.expiresAt != nil }
+        XCTAssertTrue(timedChallenges.allSatisfy { $0.expiresAt! > clock })
+        XCTAssertNotEqual(timedChallenges.first { $0.kind == .daily }?.expiresAt, originalDailyExpiration)
+        XCTAssertEqual(store.active.count, store.challenges.count)
     }
 
     @MainActor
