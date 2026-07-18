@@ -43,11 +43,17 @@ struct FilterChip: View {
     let selected: Bool
     let action: () -> Void
     var body: some View {
-        Button(title, action: action)
-            .font(.caption.bold())
-            .foregroundStyle(selected ? .black : .white)
-            .padding(.horizontal, 14).padding(.vertical, 8)
-            .background(selected ? Color.orange : Color.gray.opacity(0.25), in: Capsule())
+        Button(action: action) {
+            Text(title)
+                .font(.caption.bold())
+                .foregroundStyle(selected ? .black : .white)
+                .padding(.horizontal, 14)
+                .frame(minWidth: 44, minHeight: 44)
+                .background(selected ? Color.orange : Color.gray.opacity(0.25), in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
