@@ -114,6 +114,45 @@ final class OpsTrackerTests: XCTestCase {
         XCTAssertEqual(tokenStore.saveCount, 0)
         XCTAssertEqual(store.state, .unavailable("Rejected test session."))
     }
+
+    @MainActor
+    func testDisconnectInvalidatesPendingConnection() async {
+        let tokenStore = FakeTokenStore()
+        let service = ControlledActivisionService()
+        let store = AccountStore(keychain: tokenStore, service: service)
+
+        let connection = Task { await store.connect(ssoToken: "pending-token") }
+        await service.waitUntilPending(token: "pending-token")
+        store.disconnect()
+        await service.succeed(token: "pending-token", identity: "Too Late")
+        await connection.value
+
+        XCTAssertEqual(store.state, .disconnected)
+        XCTAssertNil(store.lastSync)
+        XCTAssertNil(tokenStore.storedToken)
+        XCTAssertEqual(tokenStore.saveCount, 0)
+    }
+
+    @MainActor
+    func testOlderConnectionCannotOverwriteNewerConnection() async {
+        let tokenStore = FakeTokenStore()
+        let service = ControlledActivisionService()
+        let store = AccountStore(keychain: tokenStore, service: service)
+
+        let older = Task { await store.connect(ssoToken: "older-token") }
+        await service.waitUntilPending(token: "older-token")
+        let newer = Task { await store.connect(ssoToken: "newer-token") }
+        await service.waitUntilPending(token: "newer-token")
+
+        await service.succeed(token: "newer-token", identity: "New Account")
+        await newer.value
+        await service.succeed(token: "older-token", identity: "Old Account")
+        await older.value
+
+        XCTAssertEqual(store.state, .connected(displayName: "New Account"))
+        XCTAssertEqual(tokenStore.storedToken, "newer-token")
+        XCTAssertEqual(tokenStore.saveCount, 1)
+    }
 }
 
 private final class FakeTokenStore: TokenStoring {
@@ -139,5 +178,25 @@ private struct RejectedSessionError: LocalizedError {
 private actor RejectingActivisionService: ActivisionServicing {
     func verifySession(token: String) async throws -> String {
         throw RejectedSessionError()
+    }
+}
+
+private actor ControlledActivisionService: ActivisionServicing {
+    private var pending: [String: CheckedContinuation<String, any Error>] = [:]
+
+    func verifySession(token: String) async throws -> String {
+        try await withCheckedThrowingContinuation { continuation in
+            pending[token] = continuation
+        }
+    }
+
+    func waitUntilPending(token: String) async {
+        while pending[token] == nil {
+            await Task.yield()
+        }
+    }
+
+    func succeed(token: String, identity: String) {
+        pending.removeValue(forKey: token)?.resume(returning: identity)
     }
 }
