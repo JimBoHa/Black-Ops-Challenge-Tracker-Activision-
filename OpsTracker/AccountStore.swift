@@ -24,8 +24,12 @@ final class AccountStore {
     ) {
         self.keychain = keychain
         self.service = service
-        if keychain.read() != nil {
-            state = .unavailable("Stored Activision session requires verification.")
+        do {
+            if try keychain.read() != nil {
+                state = .unavailable("Stored Activision session requires verification.")
+            }
+        } catch {
+            state = .unavailable("Could not read token from Keychain.")
         }
     }
 
@@ -60,7 +64,15 @@ final class AccountStore {
     func sync() async {
         let requestID = UUID()
         activeRequestID = requestID
-        guard let token = keychain.read() else {
+        let storedToken: String?
+        do {
+            storedToken = try keychain.read()
+        } catch {
+            activeRequestID = nil
+            state = .unavailable("Could not read token from Keychain.")
+            return
+        }
+        guard let token = storedToken else {
             activeRequestID = nil
             state = .disconnected
             return
@@ -92,8 +104,13 @@ final class AccountStore {
 
 protocol TokenStoring {
     func save(_ value: String) -> Bool
-    func read() -> String?
+    func read() throws -> String?
     func delete() -> Bool
+}
+
+enum TokenStoreError: Error {
+    case readFailed
+    case invalidData
 }
 
 struct KeychainStore: TokenStoring {
@@ -134,11 +151,16 @@ struct KeychainStore: TokenStoring {
         return addItem(newItem as CFDictionary) == errSecSuccess
     }
 
-    func read() -> String? {
+    func read() throws -> String? {
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account, kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
         var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess, let data = result as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess else { throw TokenStoreError.readFailed }
+        guard let data = result as? Data, let value = String(data: data, encoding: .utf8) else {
+            throw TokenStoreError.invalidData
+        }
+        return value
     }
 
     func delete() -> Bool {

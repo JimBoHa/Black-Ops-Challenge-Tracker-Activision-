@@ -203,6 +203,14 @@ final class OpsTrackerTests: XCTestCase {
         XCTAssertTrue(keychain.save("new-token"))
         XCTAssertEqual(addedValue, "new-token")
     }
+
+    @MainActor
+    func testKeychainReadFailureDoesNotReportDisconnected() {
+        let tokenStore = FakeTokenStore(readSucceeds: false)
+        let store = AccountStore(keychain: tokenStore, service: RejectingActivisionService())
+
+        XCTAssertEqual(store.state, .unavailable("Could not read token from Keychain."))
+    }
 }
 
 private final class FakeTokenStore: TokenStoring {
@@ -210,10 +218,12 @@ private final class FakeTokenStore: TokenStoring {
     var saveCount = 0
     var deleteCount = 0
     private let deleteSucceeds: Bool
+    private let readSucceeds: Bool
 
-    init(storedToken: String? = nil, deleteSucceeds: Bool = true) {
+    init(storedToken: String? = nil, deleteSucceeds: Bool = true, readSucceeds: Bool = true) {
         self.storedToken = storedToken
         self.deleteSucceeds = deleteSucceeds
+        self.readSucceeds = readSucceeds
     }
 
     func save(_ value: String) -> Bool {
@@ -222,7 +232,10 @@ private final class FakeTokenStore: TokenStoring {
         return true
     }
 
-    func read() -> String? { storedToken }
+    func read() throws -> String? {
+        guard readSucceeds else { throw TokenStoreError.readFailed }
+        return storedToken
+    }
     func delete() -> Bool {
         deleteCount += 1
         if deleteSucceeds { storedToken = nil }
