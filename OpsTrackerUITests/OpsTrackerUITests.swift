@@ -1,19 +1,10 @@
 import XCTest
 import UIKit
 
+@MainActor
 final class OpsTrackerUITests: XCTestCase {
-    private var app: XCUIApplication!
-
-    override func setUpWithError() throws {
-        continueAfterFailure = false
-        app = XCUIApplication()
-        if name.contains("DashboardAtAccessibilityTextSize") {
-            app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
-        }
-        app.launch()
-    }
-
     func testMainTabsAndDashboardRender() {
+        let app = launchApp()
         XCTAssertTrue(app.navigationBars["OPS TRACKER"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.tabBars.buttons["Overview"].exists)
         XCTAssertTrue(app.tabBars.buttons["Tracker"].exists)
@@ -22,6 +13,7 @@ final class OpsTrackerUITests: XCTestCase {
     }
 
     func testTrackerChallengeOpensDetails() {
+        let app = launchApp()
         app.tabBars.buttons["Tracker"].tap()
         XCTAssertTrue(app.navigationBars["CHALLENGES"].waitForExistence(timeout: 3))
         let challenge = app.staticTexts["Military Camo I"]
@@ -33,6 +25,7 @@ final class OpsTrackerUITests: XCTestCase {
     }
 
     func testDashboardTrackedChallengeOpensDetails() {
+        let app = launchApp()
         let challenge = app.staticTexts["Military Camo I"]
         XCTAssertTrue(challenge.waitForExistence(timeout: 3))
         challenge.tap()
@@ -40,6 +33,7 @@ final class OpsTrackerUITests: XCTestCase {
     }
 
     func testAccountScreenShowsSecureSessionControls() {
+        let app = launchApp()
         app.tabBars.buttons["Account"].tap()
         XCTAssertTrue(app.navigationBars["ACCOUNT"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.secureTextFields["SSO token"].exists)
@@ -48,6 +42,7 @@ final class OpsTrackerUITests: XCTestCase {
     }
 
     func testRejectedTokenDoesNotShowConnectedState() {
+        let app = launchApp()
         app.tabBars.buttons["Account"].tap()
         app.buttons["Disconnect"].tap()
 
@@ -62,6 +57,7 @@ final class OpsTrackerUITests: XCTestCase {
     }
 
     func testRestoringSampleDataRequiresConfirmation() {
+        let app = launchApp()
         app.tabBars.buttons["Account"].tap()
 
         app.buttons["Restore sample tracker data"].tap()
@@ -73,6 +69,7 @@ final class OpsTrackerUITests: XCTestCase {
     }
 
     func testOpenChallengeDetailRefreshesAfterSampleRestore() {
+        let app = launchApp()
         app.tabBars.buttons["Account"].tap()
         app.buttons["Restore sample tracker data"].tap()
         app.alerts.firstMatch.buttons["Restore data"].tap()
@@ -95,6 +92,7 @@ final class OpsTrackerUITests: XCTestCase {
     }
 
     func testFilterChipsExposeSelectionAndMinimumHitTargets() {
+        let app = launchApp()
         app.tabBars.buttons["Tracker"].tap()
         let all = app.buttons["All"]
         let camos = app.buttons["Camos"]
@@ -115,6 +113,7 @@ final class OpsTrackerUITests: XCTestCase {
     }
 
     func testDashboardAtAccessibilityTextSizeDoesNotOverlap() {
+        let app = launchApp()
         let percentage = app.staticTexts["completionPercentage"]
         let count = app.staticTexts["completionCount"]
         XCTAssertTrue(percentage.waitForExistence(timeout: 3))
@@ -128,12 +127,14 @@ final class OpsTrackerUITests: XCTestCase {
     }
 
     func testDashboardDoesNotExposeDecorativeShield() {
+        let app = launchApp()
         XCTAssertTrue(app.navigationBars["OPS TRACKER"].waitForExistence(timeout: 3))
         XCTAssertFalse(app.images["shield.lefthalf.filled"].exists)
         XCTAssertFalse(app.buttons["shield.lefthalf.filled"].exists)
     }
 
     func testIPadSupportsLandscape() throws {
+        let app = launchApp()
         guard UIDevice.current.userInterfaceIdiom == .pad else {
             throw XCTSkip("iPad-only orientation coverage")
         }
@@ -144,5 +145,15 @@ final class OpsTrackerUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["OPS TRACKER"].waitForExistence(timeout: 3))
         let frame = app.windows.firstMatch.frame
         XCTAssertGreaterThan(frame.width, frame.height)
+    }
+
+    private func launchApp() -> XCUIApplication {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        if name.contains("DashboardAtAccessibilityTextSize") {
+            app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        }
+        app.launch()
+        return app
     }
 }
