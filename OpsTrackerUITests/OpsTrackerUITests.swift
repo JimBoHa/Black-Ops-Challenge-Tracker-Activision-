@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 final class OpsTrackerUITests: XCTestCase {
     private var app: XCUIApplication!
@@ -129,5 +130,18 @@ final class OpsTrackerUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["OPS TRACKER"].waitForExistence(timeout: 3))
         XCTAssertFalse(app.images["shield.lefthalf.filled"].exists)
         XCTAssertFalse(app.buttons["shield.lefthalf.filled"].exists)
+    }
+
+    func testIPadSupportsLandscape() throws {
+        guard UIDevice.current.userInterfaceIdiom == .pad else {
+            throw XCTSkip("iPad-only orientation coverage")
+        }
+        defer { XCUIDevice.shared.orientation = .portrait }
+
+        XCUIDevice.shared.orientation = .landscapeLeft
+
+        XCTAssertTrue(app.navigationBars["OPS TRACKER"].waitForExistence(timeout: 3))
+        let frame = app.windows.firstMatch.frame
+        XCTAssertGreaterThan(frame.width, frame.height)
     }
 }
